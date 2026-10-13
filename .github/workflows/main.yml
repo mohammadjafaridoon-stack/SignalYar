@@ -1,17 +1,32 @@
-steps:
-  - name: Get repository code
-    uses: actions/checkout@v4
+name: SignalYar Bot
 
-  - name: Set up Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: '3.11'
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-  - name: Install dependencies
-    run: |
-      pip install python-telegram-bot requests
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get repository code
+        uses: actions/checkout@v4
 
-  - name: Run bot
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-    run: python main.py
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests python-telegram-bot
+
+      - name: Check Python syntax
+        run: python -m py_compile main.py
+
+      - name: Run Telegram bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python main.py
