@@ -1,47 +1,50 @@
+
 import os
+import logging
 import requests
 from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
+from telegram.ext import Application, CommandHandler, ContextTypes
+
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
 )
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+logger = logging.getLogger("SignalYar")
 
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 SYMBOL = "BTCUSDT"
 TIMEFRAME = "15m"
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "سلام! به SignalYar خوش آمدی. 🤖\n\n"
-        "دستورها:\n"
-        "/signal - بررسی بازار و دریافت وضعیت\n"
+        "سلام! به SignalYar خوش آمدی 🤖\n\n"
+        "/start - شروع ربات\n"
+        "/signal - تحلیل بازار بیت‌کوین\n"
         "/help - راهنما\n\n"
         "ربات معامله خودکار انجام نمی‌دهد."
     )
 
 
 def get_market_data():
-    url = "https://api.binance.com/api/v3/klines"
-
     response = requests.get(
-        url,
+        "https://api.binance.com/api/v3/klines",
         params={
             "symbol": SYMBOL,
             "interval": TIMEFRAME,
             "limit": 50,
         },
-        timeout=15,
+        timeout=20,
     )
     response.raise_for_status()
-
     candles = response.json()
+
+    if not isinstance(candles, list) or len(candles) < 25:
+        raise ValueError("اطلاعات بازار کافی نیست.")
 
     closes = [float(candle[4]) for candle in candles]
     price = closes[-1]
-
     sma_short = sum(closes[-7:]) / 7
     sma_long = sum(closes[-25:]) / 25
 
@@ -49,15 +52,17 @@ def get_market_data():
 
 
 async def signal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("⏳ در حال بررسی بازار...")
+
     try:
         price, sma_short, sma_long = get_market_data()
 
         if sma_short > sma_long and price > sma_short:
             status = "🟢 تمایل صعودی اولیه"
-            direction = "لانگ؛ فقط در صورت تأیید بیشتر"
+            direction = "لانگ؛ نیازمند تأیید بیشتر"
         elif sma_short < sma_long and price < sma_short:
             status = "🔴 تمایل نزولی اولیه"
-            direction = "شورت؛ فقط در صورت تأیید بیشتر"
+            direction = "شورت؛ نیازمند تأیید بیشتر"
         else:
             status = "🟡 وضعیت نامشخص"
             direction = "فعلاً ورود تأیید نشده"
@@ -65,36 +70,33 @@ async def signal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = (
             f"📊 SignalYar | {SYMBOL}\n"
             f"⏱ تایم‌فریم: {TIMEFRAME}\n\n"
-            f"💰 قیمت فعلی: {price:,.2f} USDT\n"
-            f"📈 میانگین کوتاه: {sma_short:,.2f}\n"
-            f"📉 میانگین بلند: {sma_long:,.2f}\n\n"
+            f"💰 قیمت: {price:,.2f} USDT\n"
+            f"📈 میانگین ۷ کندل: {sma_short:,.2f}\n"
+            f"📉 میانگین ۲۵ کندل: {sma_long:,.2f}\n\n"
             f"📍 وضعیت: {status}\n"
-            f"🔎 بررسی جهت: {direction}\n\n"
-            "⚠️ تحلیل اولیه است، نه سیگنال قطعی.\n"
-            "حد ضرر و حد سود قبل از معامله باید جداگانه بررسی شوند."
+            f"🔎 جهت احتمالی: {direction}\n\n"
+            "⚠️ تحلیل اولیه است و سود را تضمین نمی‌کند.\n"
+            "حد ضرر و حد سود باید جداگانه بررسی شوند."
         )
-
         await update.message.reply_text(message)
 
-    
-except Exception as e:
-        print(f"خطای دریافت اطلاعات بازار: {e}", flush=True)
+    except Exception as e:
+        logger.exception("خطا در دریافت اطلاعات بازار")
         await update.message.reply_text(
             "❌ دریافت اطلاعات بازار ناموفق بود.\n"
-            "لطفاً کمی بعد دوباره تلاش کن."
+            f"نوع خطا: {type(e).__name__}\n"
+            "جزئیات در گزارش GitHub Actions ثبت شده است."
         )
 
-async def help_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "راهنمای SignalYar\n\n"
+        "📚 راهنمای SignalYar\n\n"
         "/start - شروع ربات\n"
-        "/signal - بررسی بازار در تایم‌فریم ۱۵ دقیقه\n"
-        "/help - نمایش راهنما\n\n"
-        "این ربات معامله خودکار انجام نمی‌دهد.\n"
-        "نتیجه تحلیل تضمین‌کننده سود نیست."
+        "/signal - تحلیل بیت‌کوین\n"
+        "/help - راهنما\n\n"
+        "تایم‌فریم: ۱۵ دقیقه\n"
+        "ربات معامله خودکار انجام نمی‌دهد."
     )
 
 
@@ -105,11 +107,11 @@ def main():
         )
 
     app = Application.builder().token(TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("signal", signal))
     app.add_handler(CommandHandler("help", help_command))
 
+    logger.info("SignalYar در حال اجراست.")
     app.run_polling()
 
 
