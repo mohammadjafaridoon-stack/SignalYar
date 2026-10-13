@@ -76,12 +76,13 @@ async def signal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(message)
 
-    except Exception:
+    
+except Exception as e:
+        print(f"خطای دریافت اطلاعات بازار: {e}", flush=True)
         await update.message.reply_text(
             "❌ دریافت اطلاعات بازار ناموفق بود.\n"
             "لطفاً کمی بعد دوباره تلاش کن."
         )
-
 
 async def help_command(
     update: Update,
