@@ -1,5 +1,4 @@
-
-name: "SignalYar Bot"
+name: SignalYar Bot
 
 'on':
   workflow_dispatch:
@@ -7,7 +6,6 @@ name: "SignalYar Bot"
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
