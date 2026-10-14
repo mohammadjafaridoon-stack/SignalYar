@@ -1,7 +1,7 @@
 
-name: SignalYar Bot
+name: "SignalYar Bot"
 
-on:
+'on':
   workflow_dispatch:
 
 jobs:
