@@ -1,38 +1,28 @@
+
 name: SignalYar Bot
 
 on:
-push:
-branches:
-- main
-workflow_dispatch:
-
-permissions:
-contents: read
-
-concurrency:
-group: signalyar-bot
-cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
-run-bot:
-runs-on: ubuntu-latest
-timeout-minutes: 360
+  run-bot:
+    runs-on: ubuntu-latest
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Set up Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-  - name: Install dependencies
-    run: |
-      python -m pip install --upgrade pip
-      pip install python-telegram-bot requests
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install python-telegram-bot requests
 
-  - name: Run SignalYar bot
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-    run: python -u main.py
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python main.py
